@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at 20% -10%, #1b2030 0%, #0b0d12 55%);
+  color: #e6e8ef;
+}
+
+::selection {
+  background: #6366f1;
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #242938;
+  border-radius: 8px;
+}
+
+input, textarea, select {
+  background-color: #0f1218;
+  border: 1px solid #242938;
+  color: #e6e8ef;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
