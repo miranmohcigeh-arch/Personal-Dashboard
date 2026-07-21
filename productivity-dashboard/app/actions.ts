@@ -6,6 +6,27 @@ import type { Task, Note, HabitWithLogs } from '@/lib/types';
 
 // ---------- TASKS ----------
 
+function toDateOnlyString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value.slice(0, 10);
+  return new Date(value as string).toISOString().slice(0, 10);
+}
+
+function toISOString(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') return value;
+  return new Date(value as string).toISOString();
+}
+
+function serializeTask(row: any): Task {
+  return {
+    ...row,
+    due_date: toDateOnlyString(row.due_date),
+    created_at: toISOString(row.created_at) as string,
+    completed_at: toISOString(row.completed_at),
+  };
+}
+
 export async function getTasks(): Promise<Task[]> {
   const rows = await sql`
     SELECT * FROM tasks
@@ -16,7 +37,10 @@ export async function getTasks(): Promise<Task[]> {
       CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END ASC,
       created_at DESC
   `;
-  return rows as unknown as Task[];
+  // Neon can return DATE/TIMESTAMPTZ columns as JS Date objects. Those aren't
+  // serializable across the Server -> Client Component boundary, so we
+  // normalize everything to plain strings before returning.
+  return (rows as any[]).map(serializeTask);
 }
 
 export async function createTask(formData: FormData) {
@@ -59,7 +83,10 @@ export async function getNotes(): Promise<Note[]> {
     ORDER BY pinned DESC, created_at DESC
     LIMIT 50
   `;
-  return rows as unknown as Note[];
+  return (rows as any[]).map((row) => ({
+    ...row,
+    created_at: toISOString(row.created_at) as string,
+  }));
 }
 
 export async function createNote(formData: FormData) {
@@ -92,7 +119,7 @@ export async function getHabits(): Promise<HabitWithLogs[]> {
   const logsByHabit = new Map<number, string[]>();
   for (const log of logs as any[]) {
     const arr = logsByHabit.get(log.habit_id) || [];
-    arr.push(log.log_date);
+    arr.push(toDateOnlyString(log.log_date) as string);
     logsByHabit.set(log.habit_id, arr);
   }
 
@@ -112,7 +139,12 @@ export async function getHabits(): Promise<HabitWithLogs[]> {
       cursor.setDate(cursor.getDate() - 1);
     }
 
-    return { ...h, logged_today: loggedToday, streak } as HabitWithLogs;
+    return {
+      ...h,
+      created_at: toISOString(h.created_at) as string,
+      logged_today: loggedToday,
+      streak,
+    } as HabitWithLogs;
   });
 }
 
